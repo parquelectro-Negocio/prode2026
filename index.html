@@ -100,6 +100,11 @@ h1 { text-align: center; font-size: 1.35rem; font-weight: 700; color: #fbbf24; m
 .btn-logout:hover { background:#7f1d1d22; }
 .info-note { background:#0f172a; border-left:3px solid #fbbf24; border-radius:6px; padding:9px 12px; font-size:0.74rem; color:#94a3b8; margin-bottom:12px; line-height:1.6; }
 .info-note strong { color:#fbbf24; }
+.subtab-btn { padding:7px 14px; border-radius:7px; border:none; cursor:pointer; font-size:0.78rem; font-weight:600; background:#1e293b; color:#94a3b8; transition:all .15s; }
+.subtab-btn:hover { background:#334155; color:#e2e8f0; }
+.subtab-active { background:#4f46e5 !important; color:#fff !important; }
+.pick-edit-btn { background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:9px 12px; font-size:0.78rem; font-weight:600; cursor:pointer; text-align:left; transition:all .15s; }
+.pick-edit-btn:hover { background:#334155; border-color:#fbbf24; color:#fbbf24; }
 .subtab-btn { background:#1e293b; color:#94a3b8; border:none; border-radius:8px; padding:8px 16px; font-size:0.8rem; font-weight:600; cursor:pointer; transition:all .2s; }
 .subtab-btn:hover { background:#334155; color:#e2e8f0; }
 .subtab-active { background:#4f46e5 !important; color:#fff !important; }
@@ -605,7 +610,24 @@ function saveResults(r) {
   try { localStorage.setItem('prode2026_results', JSON.stringify(r)); } catch(e){}
 }
 
+// Cargar overrides de pronósticos guardados y aplicarlos sobre HARDCODED_PICKS
+function loadPickOverrides() {
+  try { var s = localStorage.getItem('prode2026_pickoverrides'); if(s) return JSON.parse(s); } catch(e){}
+  return {};
+}
+function savePickOverrides() {
+  try { localStorage.setItem('prode2026_pickoverrides', JSON.stringify(pickOverrides)); } catch(e){}
+}
+
 var results = loadResults();
+var pickOverrides = loadPickOverrides();
+// Aplicar overrides sobre HARDCODED_PICKS
+Object.keys(pickOverrides).forEach(function(pkey){
+  if(!HARDCODED_PICKS[pkey]) HARDCODED_PICKS[pkey]={};
+  Object.keys(pickOverrides[pkey]).forEach(function(mid){
+    HARDCODED_PICKS[pkey][mid] = pickOverrides[pkey][mid];
+  });
+});
 
 // ============================================================
 // AUTH
@@ -876,14 +898,24 @@ function setPuesto(id,val){
 }
 function setPickAdmin(pkey, matchId, val){
   if(!HARDCODED_PICKS[pkey]) HARDCODED_PICKS[pkey]={};
-  HARDCODED_PICKS[pkey][matchId] = HARDCODED_PICKS[pkey][matchId]===val ? null : val;
-  if(!HARDCODED_PICKS[pkey][matchId]) delete HARDCODED_PICKS[pkey][matchId];
+  var nuevo = HARDCODED_PICKS[pkey][matchId]===val ? null : val;
+  if(nuevo) HARDCODED_PICKS[pkey][matchId]=nuevo;
+  else delete HARDCODED_PICKS[pkey][matchId];
+  // Guardar override
+  if(!pickOverrides[pkey]) pickOverrides[pkey]={};
+  if(nuevo) pickOverrides[pkey][matchId]=nuevo;
+  else delete pickOverrides[pkey][matchId];
+  savePickOverrides();
   renderAdmin();
 }
 function setPuestoAdmin(pkey, puestoId, val){
   if(!HARDCODED_PICKS[pkey]) HARDCODED_PICKS[pkey]={};
-  HARDCODED_PICKS[pkey][puestoId]=val||null;
-  if(!val) delete HARDCODED_PICKS[pkey][puestoId];
+  if(val) HARDCODED_PICKS[pkey][puestoId]=val;
+  else delete HARDCODED_PICKS[pkey][puestoId];
+  if(!pickOverrides[pkey]) pickOverrides[pkey]={};
+  if(val) pickOverrides[pkey][puestoId]=val;
+  else delete pickOverrides[pkey][puestoId];
+  savePickOverrides();
   renderAdmin();
 }
 
