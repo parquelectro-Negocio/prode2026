@@ -111,6 +111,9 @@ h1 { text-align: center; font-size: 1.35rem; font-weight: 700; color: #fbbf24; m
 .pick-edit-btn { background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:9px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; text-align:left; transition:all .15s; }
 .pick-edit-btn:hover { background:#334155; border-color:#fbbf24; color:#fbbf24; }
 </style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -598,35 +601,69 @@ var PARTICIPANTS = [
 ];
 
 // ============================================================
-// RESULTADOS (estado) — se guarda en localStorage
+// FIREBASE + ESTADO
 // ============================================================
 var ADMIN_PASS = 'prode2026';
 
-function loadResults() {
-  try { var s = localStorage.getItem('prode2026_results'); if(s) return JSON.parse(s); } catch(e){}
-  return { matches:{}, puestos:{p1:null,p2:null,p3:null} };
-}
-function saveResults(r) {
-  try { localStorage.setItem('prode2026_results', JSON.stringify(r)); } catch(e){}
-}
+var firebaseConfig = {
+  apiKey: "AIzaSyBA-N2_UjIS_3yVyycJ9KJ5hOZYLZi4CwA",
+  authDomain: "sorteo-15d5e.firebaseapp.com",
+  databaseURL: "https://sorteo-15d5e-default-rtdb.firebaseio.com",
+  projectId: "sorteo-15d5e",
+  storageBucket: "sorteo-15d5e.firebasestorage.app",
+  messagingSenderId: "291920946841",
+  appId: "1:291920946841:web:55fcab8f94f15104193a08"
+};
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+var PRODE_REF = db.ref('prode2026');
 
-// Cargar overrides de pronósticos guardados y aplicarlos sobre HARDCODED_PICKS
-function loadPickOverrides() {
-  try { var s = localStorage.getItem('prode2026_pickoverrides'); if(s) return JSON.parse(s); } catch(e){}
-  return {};
+var results = { matches:{}, puestos:{p1:null,p2:null,p3:null} };
+var pickOverrides = {};
+var fbReady = false;
+
+function saveResults() {
+  PRODE_REF.child('results').set(results);
 }
 function savePickOverrides() {
-  try { localStorage.setItem('prode2026_pickoverrides', JSON.stringify(pickOverrides)); } catch(e){}
+  PRODE_REF.child('pickOverrides').set(pickOverrides);
 }
 
-var results = loadResults();
-var pickOverrides = loadPickOverrides();
-// Aplicar overrides sobre HARDCODED_PICKS
-Object.keys(pickOverrides).forEach(function(pkey){
-  if(!HARDCODED_PICKS[pkey]) HARDCODED_PICKS[pkey]={};
-  Object.keys(pickOverrides[pkey]).forEach(function(mid){
-    HARDCODED_PICKS[pkey][mid] = pickOverrides[pkey][mid];
+function applyOverrides() {
+  Object.keys(pickOverrides).forEach(function(pkey){
+    if(!HARDCODED_PICKS[pkey]) HARDCODED_PICKS[pkey]={};
+    Object.keys(pickOverrides[pkey]).forEach(function(mid){
+      HARDCODED_PICKS[pkey][mid] = pickOverrides[pkey][mid];
+    });
   });
+}
+
+// Escuchar cambios en tiempo real desde Firebase
+PRODE_REF.on('value', function(snap) {
+  var data = snap.val() || {};
+  if(data.results) {
+    results = data.results;
+    if(!results.puestos) results.puestos = {p1:null,p2:null,p3:null};
+    if(!results.matches) results.matches = {};
+  }
+  if(data.pickOverrides) {
+    pickOverrides = data.pickOverrides;
+    applyOverrides();
+  }
+  if(!fbReady) {
+    fbReady = true;
+    renderStandings();
+    return;
+  }
+  // Re-renderizar pestaña activa
+  var tabs = ['standings','picks','admin'];
+  var activo = document.querySelector('.tab.active');
+  if(activo) {
+    var t = tabs[Array.from(document.querySelectorAll('.tab')).indexOf(activo)];
+    if(t==='standings') renderStandings();
+    else if(t==='picks') renderPicks();
+    else if(t==='admin' && isAdmin) renderAdmin();
+  }
 });
 
 // ============================================================
@@ -889,12 +926,12 @@ function stopEditPick(){ editingPick=null; renderAdmin(); }
 
 function setResult(id,val){
   results.matches[id]=results.matches[id]===val?null:val;
-  saveResults(results);
+  saveResults();
   renderAdmin();
 }
 function setPuesto(id,val){
   results.puestos[id]=val||null;
-  saveResults(results);
+  saveResults();
 }
 function setPickAdmin(pkey, matchId, val){
   if(!HARDCODED_PICKS[pkey]) HARDCODED_PICKS[pkey]={};
@@ -920,9 +957,9 @@ function setPuestoAdmin(pkey, puestoId, val){
 }
 
 // ============================================================
-// INIT
+// INIT — Firebase dispara el primer render al conectar
 // ============================================================
-renderStandings();
+
 </script>
 </body>
 </html>
