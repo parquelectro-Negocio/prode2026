@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prode Familiar - Mundial 2026</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+.app { max-width: 980px; margin: 0 auto; padding: 16px; }
+h1 { text-align: center; font-size: 1.35rem; font-weight: 700; color: #fbbf24; margin-bottom: 2px; }
+.subtitle { text-align: center; font-size: 0.76rem; color: #94a3b8; margin-bottom: 14px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; justify-content: center; flex-wrap: wrap; }
+.tab { padding: 8px 15px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all .2s; }
+.tab.active { background: #fbbf24; color: #0f172a; }
+.tab:not(.active) { background: #1e293b; color: #94a3b8; }
+.tab:not(.active):hover { background: #334155; color: #e2e8f0; }
+
+/* ADMIN login */
+#admin-overlay { position:fixed; inset:0; background:#0f172aee; z-index:100; display:flex; align-items:center; justify-content:center; }
+.login-box { background:#1e293b; border-radius:14px; padding:30px 28px; text-align:center; width:280px; }
+.login-box h2 { color:#fbbf24; margin-bottom:8px; font-size:1.1rem; }
+.login-box p { color:#64748b; font-size:0.78rem; margin-bottom:16px; }
+.login-input { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:9px 12px; color:#e2e8f0; font-size:0.9rem; width:100%; margin-bottom:10px; }
+.login-input:focus { outline:none; border-color:#fbbf24; }
+.login-btn { background:#fbbf24; color:#0f172a; border:none; border-radius:8px; padding:9px 20px; font-weight:700; cursor:pointer; width:100%; font-size:0.88rem; }
+.login-btn:hover { background:#f59e0b; }
+.login-err { color:#f87171; font-size:0.75rem; margin-top:8px; display:none; }
+.admin-badge { background:#4f46e5; color:#c7d2fe; border:none; border-radius:6px; padding:4px 10px; font-size:0.7rem; font-weight:700; cursor:pointer; margin-left:8px; }
+
+/* TABLA */
+.summary-banner { background:#1e293b; border-radius:10px; padding:11px 14px; margin-bottom:12px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+.summary-stat .val { font-size:1.25rem; font-weight:800; color:#fbbf24; text-align:center; }
+.summary-stat .lbl { font-size:0.66rem; color:#64748b; text-align:center; }
+.progress-bar { background:#0f172a; border-radius:99px; height:5px; margin-bottom:12px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#fbbf24,#f59e0b); border-radius:99px; transition:width .4s; }
+.standings { background:#1e293b; border-radius:12px; overflow:hidden; }
+.standings-header { display:grid; grid-template-columns:38px 1fr 52px 52px 52px 52px 75px; gap:2px; padding:9px 12px; background:#0f172a; font-size:0.67rem; font-weight:700; color:#64748b; text-transform:uppercase; }
+.standings-row { display:grid; grid-template-columns:38px 1fr 52px 52px 52px 52px 75px; gap:2px; padding:8px 12px; border-bottom:1px solid #0f172a; font-size:0.82rem; align-items:center; transition:background .1s; }
+.standings-row:hover { background:#253346; }
+.standings-row:last-child { border-bottom:none; }
+.pos { color:#64748b; font-size:0.74rem; font-weight:700; text-align:center; }
+.pos.gold { color:#fbbf24; }
+.pos.silver { color:#94a3b8; }
+.pos.bronze { color:#c97c3a; }
+.name { font-weight:600; }
+.cell { text-align:center; color:#cbd5e1; font-size:0.79rem; }
+.pts { text-align:center; font-weight:800; color:#fbbf24; font-size:0.93rem; }
+
+/* PARTIDOS (admin) */
+.section-title { font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+.fecha-block { margin-bottom:13px; }
+.fecha-title { font-size:0.69rem; font-weight:700; color:#fbbf24; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; padding:4px 9px; background:#1e293b; border-radius:6px; display:inline-block; }
+.matches-grid { display:grid; gap:6px; }
+.match-card { background:#1e293b; border-radius:9px; padding:9px 12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.match-card.puestos-card { background:#1a1f35; border:1px solid #3730a3; }
+.match-num { font-size:0.67rem; color:#64748b; font-weight:700; min-width:20px; }
+.match-info { flex:1; min-width:170px; }
+.match-teams { font-size:0.81rem; font-weight:600; color:#e2e8f0; }
+.match-teams span { color:#64748b; margin:0 4px; font-size:0.7rem; }
+.match-date { font-size:0.64rem; color:#64748b; margin-top:1px; }
+.result-btns { display:flex; gap:4px; }
+.result-btn { padding:5px 10px; border-radius:6px; border:none; cursor:pointer; font-size:0.7rem; font-weight:700; transition:all .15s; }
+.result-btn.local { background:#1e3a5f; color:#60a5fa; }
+.result-btn.empate { background:#2d2d1e; color:#fbbf24; }
+.result-btn.visita { background:#3f1e1e; color:#f87171; }
+.result-btn.active-local { background:#2563eb; color:#fff; box-shadow:0 0 7px #2563eb77; }
+.result-btn.active-empate { background:#d97706; color:#fff; box-shadow:0 0 7px #d9770677; }
+.result-btn.active-visita { background:#dc2626; color:#fff; box-shadow:0 0 7px #dc262677; }
+.match-status { font-size:0.67rem; color:#22c55e; font-weight:700; min-width:16px; text-align:right; }
+.match-status.pending { color:#334155; }
+.puesto-select { background:#1e1b4b; border:1px solid #3730a3; border-radius:6px; color:#e2e8f0; padding:5px 8px; font-size:0.76rem; cursor:pointer; flex:1; min-width:150px; }
+.puesto-select:focus { outline:none; border-color:#6366f1; }
+
+/* PRONOS (lectura) */
+.picks-container { display:grid; gap:10px; }
+.picker-card { background:#1e293b; border-radius:10px; padding:12px 14px; }
+.picker-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; flex-wrap:wrap; gap:5px; }
+.picker-name { font-weight:700; color:#fbbf24; font-size:0.88rem; }
+.picker-stats { font-size:0.69rem; color:#64748b; }
+.picker-matches { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:5px; }
+.picker-match { font-size:0.72rem; background:#0f172a; border-radius:6px; padding:5px 8px; }
+.picker-match.puesto-m { border:1px solid #3730a355; }
+.pm-teams { color:#94a3b8; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.68rem; }
+.pm-label { font-size:0.64rem; color:#6366f1; font-weight:700; margin-bottom:2px; }
+.pm-pick { font-weight:700; font-size:0.75rem; }
+.pm-pick.c1 { color:#60a5fa; }   /* local */
+.pm-pick.cx { color:#fbbf24; }   /* empate */
+.pm-pick.c2 { color:#f87171; }   /* visita */
+.pm-pick.ok { color:#22c55e !important; }
+.pm-pick.fail { color:#ef4444 !important; text-decoration:line-through; }
+.pm-pick.pend { color:#475569; font-style:italic; font-weight:400; }
+
+/* SETUP */
+.setup-box { background:#1e293b; border-radius:12px; padding:18px; }
+.setup-box h3 { color:#fbbf24; margin-bottom:10px; font-size:0.92rem; }
+.btn-primary { background:#fbbf24; color:#0f172a; border:none; border-radius:8px; padding:9px 20px; font-weight:700; cursor:pointer; font-size:0.86rem; margin-top:10px; width:100%; }
+.btn-primary:hover { background:#f59e0b; }
+.btn-logout { background:#1e293b; color:#f87171; border:1px solid #7f1d1d; border-radius:6px; padding:5px 12px; font-size:0.72rem; cursor:pointer; font-weight:600; }
+.btn-logout:hover { background:#7f1d1d22; }
+.info-note { background:#0f172a; border-left:3px solid #fbbf24; border-radius:6px; padding:9px 12px; font-size:0.74rem; color:#94a3b8; margin-bottom:12px; line-height:1.6; }
+.info-note strong { color:#fbbf24; }
+.subtab-btn { background:#1e293b; color:#94a3b8; border:none; border-radius:8px; padding:8px 16px; font-size:0.8rem; font-weight:600; cursor:pointer; transition:all .2s; }
+.subtab-btn:hover { background:#334155; color:#e2e8f0; }
+.subtab-active { background:#4f46e5 !important; color:#fff !important; }
+.pick-edit-btn { background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:9px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; text-align:left; transition:all .15s; }
+.pick-edit-btn:hover { background:#334155; border-color:#fbbf24; color:#fbbf24; }
+</style>
+</head>
+<body>
+
+<!-- ADMIN OVERLAY -->
+<div id="admin-overlay" style="display:none">
+  <div class="login-box">
+    <h2>🔐 Panel Admin</h2>
+    <p>Ingresá la contraseña para cargar resultados</p>
+    <input id="pwd-input" class="login-input" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')tryLogin()">
+    <button class="login-btn" onclick="tryLogin()">Entrar</button>
+    <div id="login-err" class="login-err">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<div class="app">
+  <h1>⚽ PRODE FAMILIAR — MUNDIAL 2026</h1>
+  <p class="subtitle" id="admin-status">20 participantes · 28 partidos (1pt) + 1°/2°/3° puesto (5pts c/u) · Máx 43pts</p>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('standings')">🏆 Tabla</button>
+    <button class="tab" onclick="showTab('picks')">🎯 Pronósticos</button>
+    <button class="tab" id="tab-admin-btn" onclick="handleAdminTab()">⚙️ Admin</button>
+  </div>
+  <div id="tab-standings"></div>
+  <div id="tab-picks" style="display:none"></div>
+  <div id="tab-admin" style="display:none"></div>
+</div>
+
+<script>
+// ============================================================
+// PARTIDOS
+// ============================================================
+var MATCHES = [
+  {id:'m1',  f:'Fecha 1',  local:'México',          visita:'Sudáfrica',       date:'11 Jun · 16:00'},
+  {id:'m2',  f:'Fecha 1',  local:'Estados Unidos',  visita:'Paraguay',        date:'12 Jun · 22:00'},
+  {id:'m3',  f:'Fecha 1',  local:'Brasil',          visita:'Marruecos',       date:'13 Jun · 19:00'},
+  {id:'m4',  f:'Fecha 2',  local:'Francia',         visita:'Senegal',         date:'16 Jun · 16:00'},
+  {id:'m5',  f:'Fecha 2',  local:'Argentina',       visita:'Argelia',         date:'16 Jun · 22:00'},
+  {id:'m6',  f:'Fecha 3',  local:'México',          visita:'Corea del Sur',   date:'18 Jun · 22:00'},
+  {id:'m7',  f:'Fecha 3',  local:'Brasil',          visita:'Haití',           date:'19 Jun · 21:30'},
+  {id:'m8',  f:'Fecha 4',  local:'Alemania',        visita:'Curazao',         date:'14 Jun · 14:00'},
+  {id:'m9',  f:'Fecha 4',  local:'Costa de Marfil', visita:'Ecuador',         date:'14 Jun · 20:00'},
+  {id:'m10', f:'Fecha 4',  local:'España',          visita:'Cabo Verde',      date:'15 Jun · 13:00'},
+  {id:'m11', f:'Fecha 4',  local:'Arabia Saudita',  visita:'Uruguay',         date:'15 Jun · 19:00'},
+  {id:'m12', f:'Fecha 5',  local:'Inglaterra',      visita:'Croacia',         date:'17 Jun · 17:00'},
+  {id:'m13', f:'Fecha 5',  local:'Uzbekistán',      visita:'Colombia',        date:'17 Jun · 23:00'},
+  {id:'m14', f:'Fecha 6',  local:'Turquía',         visita:'Paraguay',        date:'20 Jun · 00:00'},
+  {id:'m15', f:'Fecha 6',  local:'Alemania',        visita:'Costa de Marfil', date:'20 Jun · 17:00'},
+  {id:'m16', f:'Fecha 6',  local:'Ecuador',         visita:'Curazao',         date:'20 Jun · 21:00'},
+  {id:'m17', f:'Fecha 6',  local:'España',          visita:'Arabia Saudita',  date:'21 Jun · 13:00'},
+  {id:'m18', f:'Fecha 6',  local:'Uruguay',         visita:'Cabo Verde',      date:'21 Jun · 19:00'},
+  {id:'m19', f:'Fecha 7',  local:'Argentina',       visita:'Austria',         date:'22 Jun · 14:00'},
+  {id:'m20', f:'Fecha 7',  local:'Portugal',        visita:'Uzbekistán',      date:'23 Jun · 14:00'},
+  {id:'m21', f:'Fecha 7',  local:'Colombia',        visita:'Congo',           date:'23 Jun · 23:00'},
+  {id:'m22', f:'Fecha 8',  local:'Escocia',         visita:'Brasil',          date:'24 Jun · 19:00'},
+  {id:'m23', f:'Fecha 9',  local:'Ecuador',         visita:'Alemania',        date:'25 Jun · 17:00'},
+  {id:'m24', f:'Fecha 9',  local:'Paraguay',        visita:'Australia',       date:'25 Jun · 23:00'},
+  {id:'m25', f:'Fecha 9',  local:'Noruega',         visita:'Francia',         date:'26 Jun · 16:00'},
+  {id:'m26', f:'Fecha 9',  local:'Uruguay',         visita:'España',          date:'26 Jun · 21:00'},
+  {id:'m27', f:'Fecha 10', local:'Colombia',        visita:'Portugal',        date:'27 Jun · 20:00'},
+  {id:'m28', f:'Fecha 10', local:'Argentina',       visita:'Jordania',        date:'27 Jun · 23:00'}
+];
+
+var PUESTOS = [
+  {id:'p1', label:'🥇 1er Puesto'},
+  {id:'p2', label:'🥈 2do Puesto'},
+  {id:'p3', label:'🥉 3er Puesto'}
+];
+
+var SELECCIONES = ['Alemania','Arabia Saudita','Argentina','Australia','Austria','Brasil','Cabo Verde','Colombia','Congo','Corea del Sur','Costa de Marfil','Croacia','Curazao','Ecuador','Escocia','España','Estados Unidos','Francia','Haití','Inglaterra','Jordania','Marruecos','México','Noruega','Países Bajos','Paraguay','Portugal','Senegal','Sudáfrica','Turquía','Uruguay','Uzbekistán'].sort();
+
+// ============================================================
+// PRONÓSTICOS HARDCODEADOS (leídos de las 20 imágenes)
+// local=1, empate=X, visita=2
+// ============================================================
+var HARDCODED_PICKS = {
+  // ---- AGUS (imagen sin nombre escrito, archivo Agus.jpeg) ----
+  // F1: México✓1, EEUU-X, Brasil-X(2)  F2: Francia-1, Arg-1  F3: Méx-2, Brasil-X
+  // F4: Ale-1, CdM-X, Esp-1, AraS-2   F5: Ing-2, Uzb-2
+  // F6: Tur-1, Ale-1, Ecu-1, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-2  F8: Bra-2
+  // F9: Ecu-2, Par-1, Nor-X, Uru-X    F10: Col-2, Arg-1
+  // Puestos: 1°Argentina, 2°Inglaterra, 3°Alemania
+  'Agus': {
+    m1:'local', m2:'empate', m3:'visita',
+    m4:'local', m5:'local',
+    m6:'visita', m7:'empate',
+    m8:'local', m9:'empate', m10:'local', m11:'visita',
+    m12:'visita', m13:'visita',
+    m14:'local', m15:'local', m16:'local', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'visita',
+    m22:'visita',
+    m23:'visita', m24:'local', m25:'empate', m26:'empate',
+    m27:'visita', m28:'local',
+    p1:'Argentina', p2:'Inglaterra', p3:'Alemania'
+  },
+  // ---- GUIDO (archivo guido.jpeg) ----
+  // F1: Méx-2, EEUU-2, Brasil-1  F2: Fra-1, Arg-1  F3: Méx-2, Bra-X
+  // F4: Ale-1, CdM-1, Esp-1, AraS-2  F5: Ing-X, Uzb-2
+  // F6: Tur-X, Ale-1, Ecu-1, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-2, Par-1, Nor-X, Uru-X  F10: Col-2, Arg-1
+  // Puestos: 1°Argentina, 2°Portugal, 3°España
+  'Guido': {
+    m1:'visita', m2:'visita', m3:'local',
+    m4:'local', m5:'local',
+    m6:'visita', m7:'empate',
+    m8:'local', m9:'local', m10:'local', m11:'visita',
+    m12:'empate', m13:'visita',
+    m14:'empate', m15:'local', m16:'local', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'visita', m24:'local', m25:'empate', m26:'empate',
+    m27:'visita', m28:'local',
+    p1:'Argentina', p2:'Portugal', p3:'España'
+  },
+  // ---- NAZARENO TORTOSA ----
+  // Todos con check verde (✓) = columna 1 (local) o columna 2... revisando imagen:
+  // F1: Méx-1, EEUU-1, Bra-1  F2: Fra-1, Arg-1  F3: Méx-X, Bra-1
+  // F4: Ale-1, CdM-1, Esp-1, AraS-2  F5: Ing-1, Uzb-2
+  // F6: Tur-X, Ale-1, Ecu-1, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-2, Par-2, Nor-2, Uru-2  F10: Col-2, Arg-1
+  // Puestos: 1°Francia, 2°España, 3°Argentina
+  'Nazareno': {
+    m1:'local', m2:'local', m3:'local',
+    m4:'local', m5:'local',
+    m6:'empate', m7:'local',
+    m8:'local', m9:'local', m10:'local', m11:'visita',
+    m12:'local', m13:'visita',
+    m14:'empate', m15:'local', m16:'local', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'visita', m24:'visita', m25:'visita', m26:'visita',
+    m27:'visita', m28:'local',
+    p1:'Francia', p2:'España', p3:'Argentina'
+  },
+  // ---- NOE PREISS ----
+  // F1: Méx-1, EEUU-X, Bra-1  F2: Fra-1, Arg-1  F3: Méx-X, Bra-X
+  // F4: Ale-1, CdM-X, Esp-1, AraS-2  F5: Ing-2, Uzb-2
+  // F6: Tur-X, Ale-1, Ecu-1, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-2, Par-1, Nor-1, Uru-1  F10: Col-1, Arg-1
+  // Puestos: 1°Argentina, 2°Uruguay, 3°Francia
+  'Noe': {
+    m1:'local', m2:'empate', m3:'local',
+    m4:'local', m5:'local',
+    m6:'empate', m7:'empate',
+    m8:'local', m9:'empate', m10:'local', m11:'visita',
+    m12:'visita', m13:'visita',
+    m14:'empate', m15:'local', m16:'local', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'visita', m24:'local', m25:'local', m26:'local',
+    m27:'local', m28:'local',
+    p1:'Argentina', p2:'Uruguay', p3:'Francia'
+  },
+  // ---- GUSTAVO (archivo Gustavo.jpeg, sin nombre en imagen) ----
+  // F1: Méx-1, EEUU-2, Bra-2  F2: Fra-1, Arg-1  F3: Méx-X, Bra-X
+  // F4: Ale-1, CdM-1, Esp-1, AraS-1  F5: Ing-2, Uzb-2
+  // F6: Tur-2, Ale-X, Ecu-1, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-X, Par-1, Nor-X, Uru-X  F10: Col-2, Col=X?? Arg-X
+  // Puestos: 1°Países Bajos, 2°Inglaterra, 3°Argentina
+  'Gustavo': {
+    m1:'local', m2:'visita', m3:'visita',
+    m4:'local', m5:'local',
+    m6:'empate', m7:'empate',
+    m8:'local', m9:'local', m10:'local', m11:'local',
+    m12:'visita', m13:'visita',
+    m14:'visita', m15:'empate', m16:'local', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'empate', m24:'local', m25:'empate', m26:'empate',
+    m27:'visita', m28:'empate',
+    p1:'Países Bajos', p2:'Inglaterra', p3:'Argentina'
+  },
+  // ---- MARUJA ----
+  // F1: Méx-1, EEUU-1, Bra-1  F2: Fra-1, Arg-1  F3: Méx-X, Bra-1
+  // F4: Ale-1, CdM-X, Esp-1, AraS-2  F5: Ing-1, Uzb-2
+  // F6: Tur-1, Ale-1, Ecu-1, Esp-X, Uru-2  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-2, Par-1, Nor-X, Uru-X  F10: Col-1, Arg-1
+  // Puestos: 1°Argentina, 2°Brasil, 3°Francia
+  'Maruja': {
+    m1:'local', m2:'local', m3:'local',
+    m4:'local', m5:'local',
+    m6:'empate', m7:'local',
+    m8:'local', m9:'empate', m10:'local', m11:'visita',
+    m12:'local', m13:'visita',
+    m14:'local', m15:'local', m16:'local', m17:'empate', m18:'visita',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'visita', m24:'local', m25:'empate', m26:'empate',
+    m27:'local', m28:'local',
+    p1:'Argentina', p2:'Brasil', p3:'Francia'
+  },
+  // ---- JUAN PABLO ----
+  // F1: Méx-2, EEUU-2, Bra-X  F2: Fra-X, Arg-1  F3: Méx-X, Bra-1
+  // F4: Ale-1, CdM-1, Esp-X, AraS-2  F5: Ing-1, Uzb-2
+  // F6: Tur-2, Ale-2, Ecu-2, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-X  F8: Bra-2
+  // F9: Ecu-X, Par-1, Nor-X, Uru-X  F10: Col-2, Arg-1
+  // Puestos: 1°Argentina, 2°España, 3°Alemania
+  'Juan Pablo': {
+    m1:'visita', m2:'visita', m3:'empate',
+    m4:'empate', m5:'local',
+    m6:'empate', m7:'local',
+    m8:'local', m9:'local', m10:'empate', m11:'visita',
+    m12:'local', m13:'visita',
+    m14:'visita', m15:'visita', m16:'visita', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'empate',
+    m22:'visita',
+    m23:'empate', m24:'local', m25:'empate', m26:'empate',
+    m27:'visita', m28:'local',
+    p1:'Argentina', p2:'España', p3:'Alemania'
+  },
+  // ---- SILVI ----
+  // F1: Méx-X, EEUU-1, Bra-1  F2: Fra-1, Arg-1  F3: Méx-1, Bra-1
+  // F4: Ale-1, CdM-X, Esp-X, AraS-2  F5: Ing-1, Uzb-X
+  // F6: Tur-2, Ale-1, Ecu-2, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-2, Par-2, Nor-2, Uru-2  F10: Col-1, Arg-1
+  // Puestos: 1°Argentina, 2°Alemania, 3°Francia
+  'Silvi': {
+    m1:'empate', m2:'local', m3:'local',
+    m4:'local', m5:'local',
+    m6:'local', m7:'local',
+    m8:'local', m9:'empate', m10:'empate', m11:'visita',
+    m12:'local', m13:'empate',
+    m14:'visita', m15:'local', m16:'visita', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'visita', m24:'visita', m25:'visita', m26:'visita',
+    m27:'local', m28:'local',
+    p1:'Argentina', p2:'Alemania', p3:'Francia'
+  },
+  // ---- SOFI LA PORTA ----
+  // F1: Méx-1, EEUU-X, Bra-1  F2: Fra-1, Arg-1  F3: Méx-1, Bra-1
+  // F4: Ale-1, CdM-2, Esp-X, AraS-2  F5: Ing-1, Uzb-2
+  // F6: Tur-2, Ale-1, Ecu-1, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-2, Par-1, Nor-X(azul?), Uru-X  F10: Col-1, Arg-1
+  // Puestos: 1°Argentina, 2°España, 3°Francia
+  'Sofi': {
+    m1:'local', m2:'empate', m3:'local',
+    m4:'local', m5:'local',
+    m6:'local', m7:'local',
+    m8:'local', m9:'visita', m10:'empate', m11:'visita',
+    m12:'local', m13:'visita',
+    m14:'visita', m15:'local', m16:'local', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'visita', m24:'local', m25:'empate', m26:'empate',
+    m27:'local', m28:'local',
+    p1:'Argentina', p2:'España', p3:'Francia'
+  },
+  // ---- CHINO ----
+  // F1: Méx-1, EEUU-1, Bra-2  F2: Fra-X, Arg-1  F3: Méx-X, Bra-X
+  // F4: Ale-1, CdM-1, Esp-1, AraS-1  F5: Ing-1, Uzb-2
+  // F6: Tur-1, Ale-1, Ecu-X, Esp-X, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-1, Par-1, Nor-X, Uru-1  F10: Col-X, Arg-1
+  // Puestos: 1°España, 2°Argentina, 3°Francia
+  'Chino': {
+    m1:'local', m2:'local', m3:'visita',
+    m4:'empate', m5:'local',
+    m6:'empate', m7:'empate',
+    m8:'local', m9:'local', m10:'local', m11:'local',
+    m12:'local', m13:'visita',
+    m14:'local', m15:'local', m16:'empate', m17:'empate', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'local', m24:'local', m25:'empate', m26:'local',
+    m27:'empate', m28:'local',
+    p1:'España', p2:'Argentina', p3:'Francia'
+  },
+  // ---- JUAN ANTONIO PATCHA ----
+  // F1: Méx-1, EEUU-X, Bra-2  F2: Fra-1, Arg-1  F3: Méx-X, Bra-X
+  // F4: Ale-1, CdM-1, Esp-1, AraS-2  F5: Ing-1, Uzb-2
+  // F6: Tur-X, Ale-1, Ecu-1, Esp-1, Uru-1  F7: Arg-X, Por-X, Col-X  F8: Bra-2
+  // F9: Ecu-2, Par-X, Nor-X, Uru-X  F10: Col-X, Arg-X
+  // Puestos: 1°España, 2°Francia, 3°Argentina
+  'Juan': {
+    m1:'local', m2:'empate', m3:'visita',
+    m4:'local', m5:'local',
+    m6:'empate', m7:'empate',
+    m8:'local', m9:'local', m10:'local', m11:'visita',
+    m12:'local', m13:'visita',
+    m14:'empate', m15:'local', m16:'local', m17:'local', m18:'local',
+    m19:'empate', m20:'empate', m21:'empate',
+    m22:'visita',
+    m23:'visita', m24:'empate', m25:'empate', m26:'empate',
+    m27:'empate', m28:'empate',
+    p1:'España', p2:'Francia', p3:'Argentina'
+  },
+  // ---- CECILIA ESCOBAR ----
+  // F1: Méx-1, EEUU-1, Bra-2  F2: Fra-1, Arg-1  F3: Méx-2, Bra-2
+  // F4: Ale-1, CdM-1, Esp-1, AraS-2  F5: Ing-1, Uzb-1
+  // F6: Tur-2, Ale-2, Ecu-1, Esp-1, Uru-2  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-2, Par-2, Nor-2, Uru-1  F10: Col-2, Arg-1
+  // Puestos: 1°España, 2°Inglaterra, 3°Alemania
+  'Ceci': {
+    m1:'local', m2:'local', m3:'visita',
+    m4:'local', m5:'local',
+    m6:'visita', m7:'visita',
+    m8:'local', m9:'local', m10:'local', m11:'visita',
+    m12:'local', m13:'local',
+    m14:'visita', m15:'visita', m16:'local', m17:'local', m18:'visita',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'visita', m24:'visita', m25:'visita', m26:'local',
+    m27:'visita', m28:'local',
+    p1:'España', p2:'Inglaterra', p3:'Alemania'
+  },
+  // ---- ROSINA PATETTA ----
+  // F1: Méx-2, EEUU-1, Bra-2  F2: Fra-1, Arg-1  F3: Méx-X, Bra-1
+  // F4: Ale-1, CdM-2, Esp-X, AraS-2  F5: Ing-1, Uzb-2
+  // F6: Tur-2, Ale-1, Ecu-2, Esp-2, Uru-2  F7: Arg-2, Por-2, Col-2  F8: Bra-2
+  // F9: Ecu-2, Par-2, Nor-X, Uru-X  F10: Col-2, Arg-1
+  // Puestos: 1°Francia, 2°España, 3°Argentina
+  'Romi': {
+    m1:'visita', m2:'local', m3:'visita',
+    m4:'local', m5:'local',
+    m6:'empate', m7:'local',
+    m8:'local', m9:'visita', m10:'empate', m11:'visita',
+    m12:'local', m13:'visita',
+    m14:'visita', m15:'local', m16:'visita', m17:'visita', m18:'visita',
+    m19:'visita', m20:'visita', m21:'visita',
+    m22:'visita',
+    m23:'visita', m24:'visita', m25:'empate', m26:'empate',
+    m27:'visita', m28:'local',
+    p1:'Francia', p2:'España', p3:'Argentina'
+  },
+  // ---- NADIA (archivo Nadia.jpeg) ----
+  // F1: Méx-1, EEUU-1, Bra-1  F2: Fra-X, Arg-1  F3: Méx-X, Bra-1
+  // F4: Ale-1, CdM-2, Esp-X, AraS-2  F5: Ing-X, Uzb-2
+  // F6: Tur-X, Ale-X, Ecu-1, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-X
+  // F9: Ecu-2, Par-2, Nor-X, Uru-X  F10: Col-2, Arg-1
+  // Puestos: 1°Argentina, 2°Francia, 3°España
+  'Nadia': {
+    m1:'local', m2:'local', m3:'local',
+    m4:'empate', m5:'local',
+    m6:'empate', m7:'local',
+    m8:'local', m9:'visita', m10:'empate', m11:'visita',
+    m12:'empate', m13:'visita',
+    m14:'empate', m15:'empate', m16:'local', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'empate',
+    m23:'visita', m24:'visita', m25:'empate', m26:'empate',
+    m27:'visita', m28:'local',
+    p1:'Argentina', p2:'Francia', p3:'España'
+  },
+  // ---- DANIEL TORTOSA ----
+  // Todos con X (empate) menos algunos con 1 o 2
+  // F1: Méx-1, EEUU-X, Bra-X  F2: Fra-1, Arg-X  F3: Méx-X, Bra-X
+  // F4: Ale-X, CdM-X, Esp-X, AraS-X  F5: Ing-X, Uzb-X
+  // F6: Tur-X, Ale-X, Ecu-X, Esp-X, Uru-X  F7: Arg-X, Por-X, Col-X  F8: Bra-X
+  // F9: Ecu-X, Par-X, Nor-X, Uru-X  F10: Col-X, Arg-X
+  // Puestos: 1°Alemania, 2°Argentina, 3°España
+  'Daniel': {
+    m1:'local', m2:'empate', m3:'empate',
+    m4:'local', m5:'empate',
+    m6:'empate', m7:'empate',
+    m8:'empate', m9:'empate', m10:'empate', m11:'empate',
+    m12:'empate', m13:'empate',
+    m14:'empate', m15:'empate', m16:'empate', m17:'empate', m18:'empate',
+    m19:'empate', m20:'empate', m21:'empate',
+    m22:'empate',
+    m23:'empate', m24:'empate', m25:'empate', m26:'empate',
+    m27:'empate', m28:'empate',
+    p1:'Alemania', p2:'Argentina', p3:'España'
+  },
+  // ---- ABU = ELIDA RUSSO ----
+  // F1: Méx-2, EEUU-X, Bra-2  F2: Fra-X, Arg-X  F3: Méx-X, Bra-X
+  // F4: Ale-X, CdM-X, Esp-X, AraS-X  F5: Ing-2, Uzb-2
+  // F6: Tur-2, Ale-2, Ecu-X, Esp-X, Uru-X  F7: Arg-X, Por-X, Col-X  F8: Bra-2
+  // F9: Ecu-2, Par-X, Nor-X, Uru-X  F10: Col-2, Arg-X
+  // Puestos: 1°Argentina, 2°Francia, 3°Brasil
+  'Abu': {
+    m1:'visita', m2:'empate', m3:'visita',
+    m4:'empate', m5:'empate',
+    m6:'empate', m7:'empate',
+    m8:'empate', m9:'empate', m10:'empate', m11:'empate',
+    m12:'visita', m13:'visita',
+    m14:'visita', m15:'visita', m16:'empate', m17:'empate', m18:'empate',
+    m19:'empate', m20:'empate', m21:'empate',
+    m22:'visita',
+    m23:'visita', m24:'empate', m25:'empate', m26:'empate',
+    m27:'visita', m28:'empate',
+    p1:'Argentina', p2:'Francia', p3:'Brasil'
+  },
+  // ---- MARCOS ARIEL PATETTA ----
+  // Casi todos col 1 (local) con algunos 2
+  // F1: Méx-1, EEUU-1, Bra-1  F2: Fra-1, Arg-1  F3: Méx-1, Bra-1
+  // F4: Ale-1, CdM-1, Esp-1, AraS-2  F5: Ing-1, Uzb-2
+  // F6: Tur-X, Ale-1, Ecu-1, Esp-1, Uru-1  F7: Arg-1, Por-1, Col-1  F8: Bra-2
+  // F9: Ecu-2, Par-2, Nor-1, Uru-1  F10: Col-1, Arg-1
+  // Puestos: 1°Argentina, 2°Brasil, 3°Alemania
+  'Marcos': {
+    m1:'local', m2:'local', m3:'local',
+    m4:'local', m5:'local',
+    m6:'local', m7:'local',
+    m8:'local', m9:'local', m10:'local', m11:'visita',
+    m12:'local', m13:'visita',
+    m14:'empate', m15:'local', m16:'local', m17:'local', m18:'local',
+    m19:'local', m20:'local', m21:'local',
+    m22:'visita',
+    m23:'visita', m24:'visita', m25:'local', m26:'local',
+    m27:'local', m28:'local',
+    p1:'Argentina', p2:'Brasil', p3:'Alemania'
+  },
+  // ---- IVONNE KALICH ----
+  // F1: Méx-X, EEUU-2, Bra-X  F2: Fra-X, Arg-X  F3: Méx-X, Bra-X
+  // F4: Ale-X, CdM-X, Esp-X, AraS-2  F5: Ing-2, Uzb-2
+  // F6: Tur-X, Ale-X, Ecu-X, Esp-X, Uru-X  F7: Arg-X, Por-X, Col-X  F8: Bra-2
+  // F9: Ecu-X, Par-X, Nor-X, Uru-X  F10: Col-2, Arg-X
+  // Puestos: 1°Argentina, 2°Portugal, 3°Brasil
+  'Ivonne': {
+    m1:'empate', m2:'visita', m3:'empate',
+    m4:'empate', m5:'empate',
+    m6:'empate', m7:'empate',
+    m8:'empate', m9:'empate', m10:'empate', m11:'visita',
+    m12:'visita', m13:'visita',
+    m14:'empate', m15:'empate', m16:'empate', m17:'empate', m18:'empate',
+    m19:'empate', m20:'empate', m21:'empate',
+    m22:'visita',
+    m23:'empate', m24:'empate', m25:'empate', m26:'empate',
+    m27:'visita', m28:'empate',
+    p1:'Argentina', p2:'Portugal', p3:'Brasil'
+  },
+  // ---- MORE = MORENA CUELLO ----
+  // F1: Méx-X, EEUU-X, Bra-X  F2: Fra-X, Arg-X  F3: Méx-2, Bra-X
+  // F4: Ale-X, CdM-1, Esp-X, AraS-2  F5: Ing-X, Uzb-2
+  // F6: Tur-2, Ale-1, Ecu-X, Esp-X, Uru-X  F7: Arg-X, Por-X, Col-X  F8: Bra-2
+  // F9: Ecu-X, Par-X, Nor-X, Uru-X  F10: Col-2, Arg-X
+  // Puestos: 1°Francia, 2°España, 3°Argentina
+  'More': {
+    m1:'empate', m2:'empate', m3:'empate',
+    m4:'empate', m5:'empate',
+    m6:'visita', m7:'empate',
+    m8:'empate', m9:'local', m10:'empate', m11:'visita',
+    m12:'empate', m13:'visita',
+    m14:'visita', m15:'local', m16:'empate', m17:'empate', m18:'empate',
+    m19:'empate', m20:'empate', m21:'empate',
+    m22:'visita',
+    m23:'empate', m24:'empate', m25:'empate', m26:'empate',
+    m27:'visita', m28:'empate',
+    p1:'Francia', p2:'España', p3:'Argentina'
+  },
+  // ---- SERGIO EZEQUIEL LA PORTA ----
+  // F1: Méx-X, EEUU-X, Bra-X  F2: Fra-X, Arg-X  F3: Méx-X, Bra-X
+  // F4: Ale-X, CdM-X, Esp-X, AraS-X  F5: Ing-X, Uzb-X
+  // F6: Tur-X, Ale-X, Ecu-X, Esp-X, Uru-X  F7: Arg-X, Por-X, Col-X  F8: Bra-X
+  // F9: Ecu-X, Par-X, Nor-X, Uru-X  F10: Col-2, Arg-X
+  // Puestos: 1°Argentina, 2°Brasil, 3°Francia
+  'Sergio': {
+    m1:'empate', m2:'empate', m3:'empate',
+    m4:'empate', m5:'empate',
+    m6:'empate', m7:'empate',
+    m8:'empate', m9:'empate', m10:'empate', m11:'empate',
+    m12:'empate', m13:'empate',
+    m14:'empate', m15:'empate', m16:'empate', m17:'empate', m18:'empate',
+    m19:'empate', m20:'empate', m21:'empate',
+    m22:'empate',
+    m23:'empate', m24:'empate', m25:'empate', m26:'empate',
+    m27:'visita', m28:'empate',
+    p1:'Argentina', p2:'Brasil', p3:'Francia'
+  }
+};
+
+// ============================================================
+// PARTICIPANTES (orden de aparición)
+// ============================================================
+var PARTICIPANTS = [
+  {key:'Agus',       name:'Agus'},
+  {key:'Guido',      name:'Guido'},
+  {key:'Nazareno',   name:'Nazareno Tortosa'},
+  {key:'Noe',        name:'Noe Preiss'},
+  {key:'Gustavo',    name:'Gustavo'},
+  {key:'Maruja',     name:'Maruja'},
+  {key:'Juan Pablo', name:'Juan Pablo'},
+  {key:'Silvi',      name:'Silvi'},
+  {key:'Sofi',       name:'Sofi La Porta'},
+  {key:'Chino',      name:'Chino'},
+  {key:'Juan',       name:'Juan Antonio Patcha'},
+  {key:'Ceci',       name:'Cecilia Escobar'},
+  {key:'Romi',       name:'Rosina Patetta'},
+  {key:'Nadia',      name:'Nadia'},
+  {key:'Daniel',     name:'Daniel Tortosa'},
+  {key:'Abu',        name:'Elida Russo'},
+  {key:'Marcos',     name:'Marcos Patetta'},
+  {key:'Ivonne',     name:'Ivonne Kalich'},
+  {key:'More',       name:'Morena Cuello'},
+  {key:'Sergio',     name:'Sergio La Porta'}
+];
+
+// ============================================================
+// RESULTADOS (estado) — se guarda en localStorage
+// ============================================================
+var ADMIN_PASS = 'prode2026';
+
+function loadResults() {
+  try { var s = localStorage.getItem('prode2026_results'); if(s) return JSON.parse(s); } catch(e){}
+  return { matches:{}, puestos:{p1:null,p2:null,p3:null} };
+}
+function saveResults(r) {
+  try { localStorage.setItem('prode2026_results', JSON.stringify(r)); } catch(e){}
+}
+
+var results = loadResults();
+
+// ============================================================
+// AUTH
+// ============================================================
+var isAdmin = false;
+
+function tryLogin() {
+  var v = document.getElementById('pwd-input').value;
+  if(v === ADMIN_PASS) {
+    isAdmin = true;
+    document.getElementById('admin-overlay').style.display='none';
+    document.getElementById('admin-status').innerHTML='20 participantes · <span style="color:#22c55e;font-weight:700">MODO ADMIN ACTIVO</span> <button class="btn-logout" onclick="logout()">Salir</button>';
+    showTab('admin');
+  } else {
+    document.getElementById('login-err').style.display='block';
+  }
+}
+function logout() {
+  isAdmin = false;
+  document.getElementById('admin-status').innerHTML='20 participantes · 28 partidos (1pt) + 1°/2°/3° puesto (5pts c/u) · Máx 43pts';
+  showTab('standings');
+}
+function handleAdminTab() {
+  if(!isAdmin) {
+    document.getElementById('admin-overlay').style.display='flex';
+    document.getElementById('pwd-input').value='';
+    document.getElementById('login-err').style.display='none';
+    setTimeout(function(){ document.getElementById('pwd-input').focus(); },100);
+  } else {
+    showTab('admin');
+  }
+}
+
+// ============================================================
+// CALCULOS
+// ============================================================
+function calcScores() {
+  return PARTICIPANTS.map(function(p) {
+    var picks = HARDCODED_PICKS[p.key] || {};
+    var ptsP=0, ptsF=0, acP=0, acF=0;
+    MATCHES.forEach(function(m) {
+      var r = results.matches[m.id];
+      if(!r) return;
+      if(picks[m.id] && picks[m.id]===r) { ptsP++; acP++; }
+    });
+    PUESTOS.forEach(function(pu) {
+      var r = results.puestos[pu.id];
+      if(!r) return;
+      if(picks[pu.id] && picks[pu.id]===r) { ptsF+=5; acF++; }
+    });
+    return { key:p.key, name:p.name, pts:ptsP+ptsF, ptsP:ptsP, ptsF:ptsF, acP:acP, acF:acF };
+  }).sort(function(a,b){ return b.pts-a.pts || b.ptsP-a.ptsP; });
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function showTab(tab) {
+  ['standings','picks','admin'].forEach(function(t,i){
+    document.querySelectorAll('.tab')[i].classList.toggle('active',t===tab);
+    document.getElementById('tab-'+t).style.display=t===tab?'':'none';
+  });
+  if(tab==='standings') renderStandings();
+  if(tab==='picks') renderPicks();
+  if(tab==='admin') renderAdmin();
+}
+
+// ============================================================
+// TABLA
+// ============================================================
+function renderStandings() {
+  var scores = calcScores();
+  var jug = Object.keys(results.matches).filter(function(k){return !!results.matches[k];}).length;
+  var pOk = [results.puestos.p1,results.puestos.p2,results.puestos.p3].filter(Boolean).length;
+  var pct = Math.round((jug+pOk)/31*100);
+  var html = '<div class="summary-banner">';
+  html += '<div class="summary-stat"><div class="val">'+jug+'<span style="font-size:.75rem">/28</span></div><div class="lbl">Partidos</div></div>';
+  html += '<div class="summary-stat"><div class="val">'+pOk+'<span style="font-size:.75rem">/3</span></div><div class="lbl">Puestos</div></div>';
+  html += '<div class="summary-stat"><div class="val">'+(scores.length?scores[0].pts:0)+'</div><div class="lbl">Mejor puntaje</div></div>';
+  html += '<div class="summary-stat"><div class="val">43</div><div class="lbl">Puntaje máx</div></div>';
+  html += '</div>';
+  html += '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+  html += '<div class="standings">';
+  html += '<div class="standings-header"><div>#</div><div>Nombre</div><div style="text-align:center">PTS</div><div style="text-align:center">⚽</div><div style="text-align:center">🏆</div><div style="text-align:center">✓</div><div style="text-align:center">%</div></div>';
+  scores.forEach(function(s,i){
+    var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+    var pc=i===0?'pos gold':i===1?'pos silver':i===2?'pos bronze':'pos';
+    var totAc=s.acP+s.acF;
+    var totJ=jug+pOk;
+    var ef=totJ>0?Math.round(totAc/totJ*100)+'%':'-';
+    html+='<div class="standings-row"><div class="'+pc+'">'+medal+'</div><div class="name">'+s.name+'</div><div class="pts">'+s.pts+'</div><div class="cell">'+s.ptsP+'</div><div class="cell" style="color:#a5b4fc">'+s.ptsF+'</div><div class="cell">'+totAc+'</div><div class="cell">'+ef+'</div></div>';
+  });
+  html += '</div>';
+  document.getElementById('tab-standings').innerHTML=html;
+}
+
+// ============================================================
+// PRONÓSTICOS (solo lectura)
+// ============================================================
+function pickLabel(pick, matchDef) {
+  if(!pick) return {txt:'—',cls:'pend'};
+  if(pick==='local') return {txt:'1 · '+matchDef.local, cls:'c1'};
+  if(pick==='empate') return {txt:'X · Empate', cls:'cx'};
+  if(pick==='visita') return {txt:'2 · '+matchDef.visita, cls:'c2'};
+  return {txt:pick, cls:'cx'};
+}
+function renderPicks() {
+  var html='<div class="picks-container">';
+  var scores=calcScores();
+  var scoreMap={};
+  scores.forEach(function(s){scoreMap[s.key]=s;});
+  PARTICIPANTS.forEach(function(p){
+    var picks=HARDCODED_PICKS[p.key]||{};
+    var sc=scoreMap[p.key];
+    html+='<div class="picker-card">';
+    html+='<div class="picker-header"><div class="picker-name">👤 '+p.name+'</div>';
+    html+='<div class="picker-stats"><strong style="color:#fbbf24">'+sc.pts+' pts</strong> · '+sc.acP+' partidos + '+sc.acF+' puestos acertados</div></div>';
+    html+='<div class="picker-matches">';
+    MATCHES.forEach(function(m,i){
+      var pick=picks[m.id]||'';
+      var result=results.matches[m.id];
+      var lbl=pickLabel(pick,m);
+      var cls=lbl.cls;
+      if(pick && result){cls=pick===result?'ok':'fail';}
+      html+='<div class="picker-match"><div class="pm-teams">'+(i+1)+'. '+m.local+' vs '+m.visita+'</div>';
+      html+='<div class="pm-pick '+cls+'">'+lbl.txt+'</div></div>';
+    });
+    PUESTOS.forEach(function(pu){
+      var pick=picks[pu.id]||'';
+      var result=results.puestos[pu.id];
+      var cls='cx';
+      if(pick && result){cls=pick===result?'ok':'fail';}
+      else if(!pick){cls='pend';}
+      html+='<div class="picker-match puesto-m"><div class="pm-label">'+pu.label+'</div>';
+      html+='<div class="pm-pick '+cls+'">'+(pick||'—')+'</div></div>';
+    });
+    html+='</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('tab-picks').innerHTML=html;
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+var adminSubtab = 'resultados'; // 'resultados' | 'pronos'
+var editingPick = null; // key del participante que se está editando
+
+function renderAdmin() {
+  if(!isAdmin){document.getElementById('tab-admin').innerHTML='';return;}
+
+  var html = '';
+  // Subtabs
+  html += '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">';
+  html += '<button class="subtab-btn '+(adminSubtab==='resultados'?'subtab-active':'')+'" onclick="switchAdminTab(\'resultados\')">📋 Cargar resultados</button>';
+  html += '<button class="subtab-btn '+(adminSubtab==='pronos'?'subtab-active':'')+'" onclick="switchAdminTab(\'pronos\')">✏️ Editar pronósticos</button>';
+  html += '<button class="btn-logout" style="margin-left:auto" onclick="logout()">Salir</button>';
+  html += '</div>';
+
+  if(adminSubtab==='resultados') {
+    html += '<div class="info-note">Hacé click en <strong>1 / X / 2</strong> para cargar el resultado. Click de nuevo para desmarcarlo. La tabla se actualiza automáticamente.</div>';
+    var curF='';
+    MATCHES.forEach(function(m,i){
+      var r=results.matches[m.id]||null;
+      if(m.f!==curF){
+        if(curF!=='')html+='</div></div>';
+        curF=m.f;
+        html+='<div class="fecha-block"><div class="fecha-title">'+m.f+'</div><div class="matches-grid">';
+      }
+      html+='<div class="match-card">';
+      html+='<div class="match-num">'+(i+1)+'</div>';
+      html+='<div class="match-info"><div class="match-teams">'+m.local+' <span>vs</span> '+m.visita+'</div><div class="match-date">'+m.date+'</div></div>';
+      html+='<div class="result-btns">';
+      html+='<button class="result-btn local '+(r==='local'?'active-local':'')+'" onclick="setResult(\''+m.id+'\',\'local\')">1</button>';
+      html+='<button class="result-btn empate '+(r==='empate'?'active-empate':'')+'" onclick="setResult(\''+m.id+'\',\'empate\')">X</button>';
+      html+='<button class="result-btn visita '+(r==='visita'?'active-visita':'')+'" onclick="setResult(\''+m.id+'\',\'visita\')">2</button>';
+      html+='</div>';
+      html+='<div class="match-status '+(r?'':'pending')+'">'+(r?'✓':'–')+'</div>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+    // PUESTOS
+    html+='<div class="fecha-block" style="margin-top:6px"><div class="fecha-title" style="color:#a5b4fc;background:#1e1b4b">🏆 Campeón y puestos — 5 puntos c/u</div><div class="matches-grid">';
+    PUESTOS.forEach(function(pu){
+      var res=results.puestos[pu.id]||'';
+      html+='<div class="match-card puestos-card"><div class="match-info"><div class="match-teams">'+pu.label+'</div></div>';
+      html+='<select class="puesto-select" onchange="setPuesto(\''+pu.id+'\',this.value)">';
+      html+='<option value="">— Sin definir —</option>';
+      SELECCIONES.forEach(function(s){html+='<option value="'+s+'" '+(res===s?'selected':'')+'>'+s+'</option>';});
+      html+='</select>';
+      html+='<div class="match-status '+(res?'':'pending')+'">'+(res?'✓':'–')+'</div>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+
+  } else {
+    // EDITAR PRONÓSTICOS
+    html += '<div class="info-note">Seleccioná un participante para editar sus pronósticos. Los cambios se guardan en el momento.</div>';
+
+    if(!editingPick) {
+      // Lista de participantes para elegir
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">';
+      PARTICIPANTS.forEach(function(p){
+        html += '<button class="pick-edit-btn" onclick="startEditPick(\''+p.key+'\')">✏️ '+p.name+'</button>';
+      });
+      html += '</div>';
+    } else {
+      // Editor de un participante
+      var p = PARTICIPANTS.filter(function(x){return x.key===editingPick;})[0];
+      var picks = HARDCODED_PICKS[p.key] || {};
+      html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">';
+      html += '<button class="btn-logout" onclick="stopEditPick()">← Volver</button>';
+      html += '<span style="font-weight:700;color:#fbbf24;font-size:0.95rem">✏️ '+p.name+'</span>';
+      html += '</div>';
+
+      // Partidos
+      var curF2='';
+      MATCHES.forEach(function(m,i){
+        var pick=picks[m.id]||'';
+        if(m.f!==curF2){
+          if(curF2!=='')html+='</div></div>';
+          curF2=m.f;
+          html+='<div class="fecha-block"><div class="fecha-title">'+m.f+'</div><div class="matches-grid">';
+        }
+        html+='<div class="match-card">';
+        html+='<div class="match-num">'+(i+1)+'</div>';
+        html+='<div class="match-info"><div class="match-teams">'+m.local+' <span>vs</span> '+m.visita+'</div></div>';
+        html+='<div class="result-btns">';
+        html+='<button class="result-btn local '+(pick==='local'?'active-local':'')+'" onclick="setPickAdmin(\''+p.key+'\',\''+m.id+'\',\'local\')">1</button>';
+        html+='<button class="result-btn empate '+(pick==='empate'?'active-empate':'')+'" onclick="setPickAdmin(\''+p.key+'\',\''+m.id+'\',\'empate\')">X</button>';
+        html+='<button class="result-btn visita '+(pick==='visita'?'active-visita':'')+'" onclick="setPickAdmin(\''+p.key+'\',\''+m.id+'\',\'visita\')">2</button>';
+        html+='</div>';
+        html+='<div class="match-status '+(pick?'':'pending')+'">'+(pick?{local:'1',empate:'X',visita:'2'}[pick]:'–')+'</div>';
+        html+='</div>';
+      });
+      html+='</div></div>';
+      // Puestos del participante
+      html+='<div class="fecha-block" style="margin-top:6px"><div class="fecha-title" style="color:#a5b4fc;background:#1e1b4b">🏆 Puestos elegidos</div><div class="matches-grid">';
+      PUESTOS.forEach(function(pu){
+        var pick=picks[pu.id]||'';
+        html+='<div class="match-card puestos-card"><div class="match-info"><div class="match-teams">'+pu.label+'</div></div>';
+        html+='<select class="puesto-select" onchange="setPuestoAdmin(\''+p.key+'\',\''+pu.id+'\',this.value)">';
+        html+='<option value="">— No elegido —</option>';
+        SELECCIONES.forEach(function(s){html+='<option value="'+s+'" '+(pick===s?'selected':'')+'>'+s+'</option>';});
+        html+='</select>';
+        html+='<div class="match-status '+(pick?'':'pending')+'">'+(pick?'✓':'–')+'</div>';
+        html+='</div>';
+      });
+      html+='</div></div>';
+    }
+  }
+
+  document.getElementById('tab-admin').innerHTML=html;
+}
+
+function switchAdminTab(t){ adminSubtab=t; editingPick=null; renderAdmin(); }
+function startEditPick(key){ editingPick=key; renderAdmin(); }
+function stopEditPick(){ editingPick=null; renderAdmin(); }
+
+function setResult(id,val){
+  results.matches[id]=results.matches[id]===val?null:val;
+  saveResults(results);
+  renderAdmin();
+}
+function setPuesto(id,val){
+  results.puestos[id]=val||null;
+  saveResults(results);
+}
+function setPickAdmin(pkey, matchId, val){
+  if(!HARDCODED_PICKS[pkey]) HARDCODED_PICKS[pkey]={};
+  HARDCODED_PICKS[pkey][matchId] = HARDCODED_PICKS[pkey][matchId]===val ? null : val;
+  if(!HARDCODED_PICKS[pkey][matchId]) delete HARDCODED_PICKS[pkey][matchId];
+  renderAdmin();
+}
+function setPuestoAdmin(pkey, puestoId, val){
+  if(!HARDCODED_PICKS[pkey]) HARDCODED_PICKS[pkey]={};
+  HARDCODED_PICKS[pkey][puestoId]=val||null;
+  if(!val) delete HARDCODED_PICKS[pkey][puestoId];
+  renderAdmin();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderStandings();
+</script>
+</body>
+</html>
